@@ -301,47 +301,15 @@ def nearest_temperature(lat: float, lng: float, grid: list[dict]) -> float:
 
 
 if __name__ == "__main__":
-    # Manual smoke test — pulls ONE real hour and prints full diagnostics
-    # at every layer, so a wrong assumption about the response shape is
-    # visible immediately instead of silently returning an empty list.
-    #
-    # Run this deliberately, not in a loop: it spends real credits
-    # unless the result is already cached under data/cache/.
-    STUDY_DATE = "2025-07-15"  # historical date confirmed by community member
-    STUDY_HOUR = 14  # integer — NOT "14:00"
+    # Clean smoke test — debugging is done, this is the real usage pattern.
+    # Cache-first: first run per (date, hour) spends one real API call and
+    # saves it; every run after that is free and instant.
+    STUDY_DATE = "2025-07-15"
+    STUDY_HOUR = 14
 
-    print(f"Submitting heatmap for {STUDY_DATE} {STUDY_HOUR:02d}:00 ...")
-    activity_id = submit_heatmap(
-        PHOENIX_STUDY_AREA,
-        start_date=STUDY_DATE,
-        start_time=f"{STUDY_HOUR:02d}:00",
-        filter_type=1,
-        granularity=100,
-        analytic_type="tcm",
-    )
-    print("activity_id:", activity_id)
-
-    print("Waiting for result...")
-    result = wait_for(activity_id)
-    print("result keys:", list(result.keys()))
-
-    map_data = result.get("map_data", {})
-    print("map_data type:", type(map_data).__name__)
-    if isinstance(map_data, dict):
-        print("map_data keys:", list(map_data.keys()))
-
-    features = map_data.get("features", []) if isinstance(map_data, dict) else []
-    print("feature count:", len(features))
-
-    if features:
-        print("first feature (raw):")
-        print(json.dumps(features[0], indent=2))
-    else:
-        print("stats_data (for reference, since map_data was empty):")
-        print(json.dumps(result.get("stats_data", {}), indent=2)[:1000])
-
-    grid = get_temperature_grid(STUDY_DATE, STUDY_HOUR, use_cache=False)
-    print(f"\nget_temperature_grid() -> {len(grid)} points")
+    print(f"Fetching Phoenix grid for {STUDY_DATE} {STUDY_HOUR:02d}:00 ...")
+    grid = get_temperature_grid(STUDY_DATE, STUDY_HOUR, use_cache=True)
+    print(f"Points returned: {len(grid)}")
     if grid:
         temps = [p["temp_c"] for p in grid]
         print(f"Temp range: {min(temps):.1f}C - {max(temps):.1f}C")
