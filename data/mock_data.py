@@ -107,6 +107,9 @@ WORKER_ROSTER = {
     "W-03": {"profile": "utility_inspector", "start_hour": 8},
     "W-04": {"profile": "mixed_field_tech", "start_hour": 9},
     "W-05": {"profile": "construction_crew", "start_hour": 7},
+    "W-06": {"profile": "mixed_field_tech", "start_hour": 10},
+    "W-07": {"profile": "delivery_rider", "start_hour": 9},
+    "W-08": {"profile": "construction_crew", "start_hour": 8},
 }
 
 
