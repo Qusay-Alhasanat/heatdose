@@ -155,12 +155,25 @@ def temp_at(hour: int, zone: str) -> float:
     return round(temp, 1)
 
 
-def _location_in_zone(zone: str) -> dict:
-    """Picks a point near a zone's centre, with slight scatter."""
+def _location_in_zone(zone: str, seed_key: str | None = None) -> dict:
+    """
+    Picks a point near a zone's centre, with slight scatter.
+
+    seed_key: when provided, uses a locally-seeded RNG (same pattern as
+    temp_at()) so a given key always returns the same location, no
+    matter what else has been drawn from the global random stream
+    first. Without this, generating one worker's shift in isolation
+    (e.g. worker_status.get_worker_status() calling
+    generate_mock_shift() for a single worker) would silently produce
+    different coordinates than the same worker generated as part of
+    the full roster in generate_mock_workers() — breaking the
+    reproducibility the whole project depends on for judging.
+    """
     lat, lng = ZONE_CENTRES[zone]
+    rng = random.Random(seed_key) if seed_key is not None else random
     return {
-        "lat": round(lat + random.uniform(-0.004, 0.004), 4),
-        "lng": round(lng + random.uniform(-0.004, 0.004), 4),
+        "lat": round(lat + rng.uniform(-0.004, 0.004), 4),
+        "lng": round(lng + rng.uniform(-0.004, 0.004), 4),
     }
 
 
@@ -200,7 +213,7 @@ def generate_mock_shift(
         shift.append(
             {
                 "worker_id": worker_id,
-                "location": _location_in_zone(zone),
+                "location": _location_in_zone(zone, seed_key=f"{worker_id}:{i}:{zone}"),
                 "timestamp": timestamp.isoformat(),
                 "temp_c": temp_at(timestamp.hour, zone),
             }
