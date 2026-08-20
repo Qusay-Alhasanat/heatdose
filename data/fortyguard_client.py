@@ -285,6 +285,45 @@ def get_temperature_grid(
     return points
 
 
+# --------------------------------------------------------------------
+# Batch pulling — pulls an explicit list of hours for one date.
+# Deliberately takes hours as a plain argument, not derived from
+# mock_data.py or any worker roster: this keeps the client a generic
+# API boundary. Which hours a roster needs is business logic that
+# belongs in real_shift_builder.py, not here.
+# --------------------------------------------------------------------
+
+
+def pull_hours(
+    date: str, hours: list[int] | range, granularity: int = 100
+) -> dict[int, list[dict]]:
+    """
+    Pulls (or replays from cache) a batch of hours for one date, one
+    heatmap request per hour. Cache-first per hour via
+    get_temperature_grid(), so re-running this after a partial failure
+    only spends credits on hours not already cached.
+
+    Args:
+        date: ISO date string, e.g. "2025-07-15".
+        hours: hours of day to pull, e.g. range(6, 19) for 06:00-18:00.
+        granularity: passed through to get_temperature_grid().
+
+    Returns:
+        {hour: [points...]} for every hour requested.
+    """
+    hours = list(hours)
+    print(f"Pulling {len(hours)} hour(s) for {date} (granularity={granularity})...\n")
+
+    results = {}
+    for hour in hours:
+        print(f"  {date} {hour:02d}:00 ...", end=" ", flush=True)
+        results[hour] = get_temperature_grid(date, hour, granularity=granularity)
+        print(f"cached ({len(results[hour])} tiles).")
+
+    print("\nDone.")
+    return results
+
+
 def nearest_temperature(lat: float, lng: float, grid: list[dict]) -> float:
     """
     Looks up the temperature of the grid tile nearest a given point.
@@ -301,16 +340,28 @@ def nearest_temperature(lat: float, lng: float, grid: list[dict]) -> float:
 
 
 if __name__ == "__main__":
-    # Clean smoke test — debugging is done, this is the real usage pattern.
-    # Cache-first: first run per (date, hour) spends one real API call and
-    # saves it; every run after that is free and instant.
-    STUDY_DATE = "2025-07-15"
-    STUDY_HOUR = 14
+    import sys
 
-    print(f"Fetching Phoenix grid for {STUDY_DATE} {STUDY_HOUR:02d}:00 ...")
-    grid = get_temperature_grid(STUDY_DATE, STUDY_HOUR, use_cache=True)
-    print(f"Points returned: {len(grid)}")
-    if grid:
-        temps = [p["temp_c"] for p in grid]
-        print(f"Temp range: {min(temps):.1f}C - {max(temps):.1f}C")
-        print(f"Sample point: {grid[0]}")
+    # Cache-first throughout: first run per (date, hour) spends one real
+    # API call and saves it; every run after that is free and instant.
+    STUDY_DATE = "2025-07-15"
+
+    # Full shift envelope the demo roster needs (06:00-18:00, see
+    # PROJECT_SPEC.md section 5.1). Change this if the roster's start/end
+    # hours ever change.
+    DEMO_HOURS = range(6, 19)
+
+    if "--pull-day" in sys.argv:
+        results = pull_hours(STUDY_DATE, DEMO_HOURS)
+        total_tiles = sum(len(points) for points in results.values())
+        print(f"Summary: {len(results)} hour(s) cached, {total_tiles} tiles total.")
+    else:
+        STUDY_HOUR = 14
+        print(f"Fetching Phoenix grid for {STUDY_DATE} {STUDY_HOUR:02d}:00 ...")
+        grid = get_temperature_grid(STUDY_DATE, STUDY_HOUR, use_cache=True)
+        print(f"Points returned: {len(grid)}")
+        if grid:
+            temps = [p["temp_c"] for p in grid]
+            print(f"Temp range: {min(temps):.1f}C - {max(temps):.1f}C")
+            print(f"Sample point: {grid[0]}")
+        print("\nTip: run with --pull-day to fetch all hours the roster needs at once.")
