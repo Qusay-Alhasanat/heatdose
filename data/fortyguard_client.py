@@ -93,6 +93,16 @@ class FortyGuardError(Exception):
     """Raised for API errors, failed tasks, or timeouts."""
 
 
+# Fixed study date and the demo roster's full shift envelope (06:00-18:00,
+# see PROJECT_SPEC.md section 5.1). Module-level so every other file that
+# needs to know "which hours are actually cached" imports this single
+# source of truth instead of re-declaring it — api/main.py in particular
+# uses DEMO_HOURS to reject out-of-range hour requests BEFORE attempting
+# any live call, guaranteeing the demo never accidentally spends quota.
+STUDY_DATE = "2025-07-15"
+DEMO_HOURS = range(6, 19)
+
+
 def _headers() -> dict:
     if not API_KEY:
         raise FortyGuardError(
@@ -344,12 +354,6 @@ if __name__ == "__main__":
 
     # Cache-first throughout: first run per (date, hour) spends one real
     # API call and saves it; every run after that is free and instant.
-    STUDY_DATE = "2025-07-15"
-
-    # Full shift envelope the demo roster needs (06:00-18:00, see
-    # PROJECT_SPEC.md section 5.1). Change this if the roster's start/end
-    # hours ever change.
-    DEMO_HOURS = range(6, 19)
 
     if "--pull-day" in sys.argv:
         results = pull_hours(STUDY_DATE, DEMO_HOURS)
