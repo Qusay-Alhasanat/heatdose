@@ -102,6 +102,14 @@ Each tile in `map_data.features` looks like:
 We read `properties.average_temperature` — not `temperature`, which is
 what we initially (incorrectly) assumed.
 
+**Real example from our own pull** (2025-07-15, 14:00, granularity=100,
+~2,719 tiles returned for the ~9.5 sq mi study polygon): temperatures
+across the grid ranged from roughly 39.6°C to 39.8°C at that hour — a
+range under 0.3°C across the entire study area. This surprised us; see
+`docs/methodology.md`'s "What we measured" section for what we tested
+next and why the spatial signal is this small at this hour, and how it
+changed our baseline comparison methodology.
+
 ## Debugging journey — three issues, in the order we hit them
 
 1. **`n_cells: 0` with no error.** Task completed successfully but
@@ -120,18 +128,39 @@ We resolved this by testing directly against the live API explorer
 (docs-api.fortyguard.com/docs), which surfaces the official worked
 example — the source of truth that resolved all three issues at once.
 
+## Batch pulling — `pull_hours()`
+
+`data/fortyguard_client.py` exposes `pull_hours(date, hours)`: a plain
+loop over `get_temperature_grid()` for an explicit list of hours,
+cache-first per hour. It takes no knowledge of workers or rosters —
+deciding *which* hours are needed is business logic that stays in
+`data/real_shift_builder.py`, keeping this file a generic API boundary
+(see `PROJECT_SPEC.md` section 4's one-file-swap rule).
+
+Run with:
+
+```
+uv run python data/fortyguard_client.py --pull-day
+```
+
+This pulls the full demo roster's shift envelope — 06:00 through
+18:00, 13 hours — for our fixed study date in one command. Already-cached
+hours are skipped automatically, so re-running it after a partial
+failure only spends credits on what's still missing.
+
 ## Caching strategy
 
 Every successful pull is saved to `data/cache/` as JSON, keyed by date,
 hour, and granularity. `get_temperature_grid()` checks the cache before
 making a live call. This serves two purposes:
 
-1. **Quota protection.** The hackathon trial enforces a **30
-   heatmaps/day limit** (separate from the 2,000,000-credit balance —
-   discovered via the Dashboard's Usage tab, not documented in the API
-   docs or FAQ). Debugging the three issues above alone consumed
-   several calls; caching means we never pay twice for the same
-   (date, hour) pair.
+1. **Quota protection.** The trial enforces a **30 heatmaps/day limit**,
+   confirmed directly in the account dashboard's Usage tab (resets to
+   0/30 each day — not documented in the API docs or FAQ). Pulling the
+   full 13-hour roster envelope costs 13 calls, well inside a single
+   day's quota with room for re-runs. Debugging the three issues above
+   consumed a handful more; caching means we never pay twice for the
+   same (date, hour) pair regardless.
 2. **Judging reliability.** The live demo reads exclusively from
    `data/cache/` at runtime — it never depends on a real-time API call
    during judging. This is confirmed by FortyGuard support as the
@@ -140,8 +169,21 @@ making a live call. This serves two purposes:
 
 ## Quota budget
 
-With a 30/day cap, pulling one hour across the full study area (all
-seven zones in a single ~9.5 sq mi polygon) costs exactly 1 call per
-hour needed. For the demo roster's shift range (roughly 06:00–19:00),
-that's under 15 calls total — comfortably within a single day's quota,
-with room left for re-runs if needed.
+With a 30/day cap, pulling the full demo roster's shift envelope
+(06:00–18:00, all seven zones in a single ~9.5 sq mi polygon) costs
+exactly 13 calls — one per distinct hour needed, regardless of how many
+workers are on the roster, since a single hourly grid covers the whole
+area at once. Adding more workers to the roster costs zero additional
+calls as long as their shifts fall within an already-pulled hour range.
+
+## Which analysis layer we use
+
+We use `tcm` (raw temperature, the API's default — `analytic_type`
+omitted from the request) rather than the built-in `exceedance` or
+`persistence` analytics. Those require `filter_type=4` (a multi-day
+window) and are built for a fixed area accumulating over time — a
+different problem shape from what we need (a moving worker's exposure
+within a single shift). We compute our own accumulation
+(`calculate_excess_dose()` in `data/hdi.py`) on top of raw per-hour,
+per-tile readings instead. See `docs/methodology.md` for the full
+reasoning.

@@ -49,24 +49,97 @@ Verification: `tests/test_hdi.py`
 
 Existing occupational heat standards evaluate **instantaneous
 conditions**: what is the environmental heat right now, and does it
-exceed a threshold? This works well for a fixed worksite.
+exceed a threshold? This works well for a single check taken at one
+moment. It works poorly for a worker whose shift spans many hours: the
+same city can be 7°C hotter at 2 PM than it was at 6 AM (see our own
+measured data below), and a single morning reading tells a manager
+nothing about what a crew absorbs by mid-afternoon.
 
-It works poorly for a mobile worker. A delivery rider or a maintenance
-crew moves through many microclimates during a single shift — shaded
-residential streets, exposed asphalt lots, industrial zones. Street-level
-temperature can vary substantially across a single city at the same hour.
-
-Two workers on the same day, in the same city, under the same forecast,
-can accumulate very different thermal loads. An operations manager
-looking at a single city-wide number has no way to distinguish them.
+Two workers who start their shifts at different hours, or work shifts of
+different lengths, can accumulate very different thermal loads on the
+same day, in the same city, under the same forecast. An operations
+manager looking at a single reading — checked once, at one time — has no
+way to see this.
 
 HDI addresses that gap. It is a **per-worker, per-shift** measure that
-accounts for where the worker was, how hot it was there, and how long
-they stayed.
+accounts for how hot it was at every point across the shift and how long
+the worker was exposed, not just the reading at the moment someone
+happened to check.
 
-This is only computable with hyperlocal, time-resolved temperature data —
-in our case FortyGuard's 2-meter ambient air temperature at roughly
-20-meter resolution, available hour by hour.
+This is only computable with time-resolved temperature data — in our
+case FortyGuard's 2-metre ambient air temperature, available hour by
+hour. See *What we measured* below for what this data source's spatial
+resolution specifically does and does not add, tested directly rather
+than assumed.
+
+## What we measured: spatial vs. temporal resolution
+
+Our original hypothesis was that FortyGuard's advantage over a standard
+weather source is primarily **spatial**: that a worker in an exposed
+industrial zone experiences meaningfully hotter conditions than a worker
+in a shaded park at the same hour, and that this difference is large
+enough to change a risk classification. We tested this directly against
+real data rather than assuming it, and it did not hold up — which
+changed our methodology.
+
+**What we tested.** Using our own real, cached FortyGuard grid data for
+the study area (13 hours, 06:00–18:00, ~2,700 tiles per hour), we
+compared the nearest-tile reading at a verified industrial location (an
+auto-salvage yard with zero vegetation, confirmed against satellite
+imagery) against a verified 222-acre public park with a lagoon and two
+golf courses. We checked this pair at four daytime hours plus one
+pre-dawn hour (03:00), on the theory that spatial contrast is often
+larger overnight.
+
+**What we found.** The difference never exceeded 0.3°C, at any hour
+tested, including pre-dawn. This was not a mistake in our zone
+coordinates — we deliberately re-verified both endpoints against
+satellite imagery before concluding this.
+
+**Why this is expected, not a data quality problem.** Published research
+distinguishes *surface* urban heat island effects (land-surface
+temperature, which can differ by 5–9°C between paved and vegetated
+surfaces) from *canopy-layer* effects (2-metre air temperature, the
+quantity FortyGuard measures and the one relevant to a person standing
+outdoors). Canopy-layer differences are consistently reported as much
+smaller than surface differences, and are weakest during the day under
+strong convective mixing — exactly the conditions in our study window.
+Some studies report meaningful daytime air-temperature variation at
+finer spatial scale where genuine tree-canopy cover is dense (up to
+several °C), which is a direction worth testing with a different study
+area in a longer project, but it is not what our current study area and
+sampling show.
+
+**What this means for the product's claim.** We do not claim a large
+spatial-resolution advantage in this specific demo dataset. What we can
+demonstrate, and what our own cached data shows clearly, is a **temporal**
+advantage: real intra-day temperature swings of roughly 7°C between a
+06:00 shift start and the early-afternoon peak. The baseline comparison
+in `data/baseline.py` is built around this — see below.
+
+## Baseline comparison methodology
+
+`data/baseline.py`'s `compare_worker()` answers: what would a manager
+relying on a single weather check have concluded, versus what actually
+happened over the full shift?
+
+`flatten_to_single_checkin()` simulates a manager who checks conditions
+once — at the hour a worker's shift begins — and does not re-check as
+the day heats up. It holds that single hour's reading constant across
+the entire shift, then recomputes excess dose and risk level against it.
+This is compared against the real, hour-by-hour tracked exposure.
+
+This models a realistic and common operational pattern: a single morning
+look at the forecast, followed by hours of work with no further
+monitoring. The gap it reveals is temporal (continuous tracking vs. a
+single check), not spatial.
+
+`flatten_to_city_average()` — averaging the real grid across the whole
+study area for a given hour — is retained in the code for transparency.
+It was our first attempt at simulating a "city-level" baseline, and it
+is what we used to run the spatial test described above. It is no longer
+the primary comparison because the measured spatial signal it depends on
+is small.
 
 ## Relationship to existing standards
 
@@ -100,10 +173,14 @@ Two consequences follow, and both matter:
    dose — the portion of exposure that *is* meaningfully computable from
    our data.
 
-The contribution of HDI is the **temporal and spatial dimension**, not a
-better instantaneous reading. Standards tell you whether conditions are
-currently unsafe. HDI tells you how much heat a specific worker has
-already absorbed, and where it came from.
+The contribution of HDI is the **temporal dimension** — tracking
+accumulated exposure continuously across a shift, not a single reading —
+rather than a better instantaneous reading or a spatial advantage we
+have not been able to demonstrate with this study area. Standards tell
+you whether conditions are currently unsafe. HDI tells you how much heat
+a specific worker has already absorbed by continuously tracking real
+data across their shift, and where a single-check baseline would have
+missed it.
 
 ## Risk thresholds
 
@@ -165,6 +242,18 @@ We consider it more useful to state these plainly than to overclaim.
   set of coordinates chosen to sit within walking distance of exposed
   zones. A production system would derive them from real amenity data
   (parks, covered structures, public buildings) rather than a static list.
+- **Spatial resolution advantage not demonstrated in this study area.**
+  We tested it directly (see *What we measured* above) and found under
+  0.3°C variance even between verified industrial and verified
+  heavily-vegetated park locations, at multiple hours including
+  pre-dawn. This does not mean hyperlocal spatial data has no value in
+  general — it means our specific ~9.5 sq mi central-Phoenix study area,
+  on this date, does not show a large enough spatial signal for us to
+  responsibly claim it as evidence. The demonstrated advantage in this
+  project is temporal (continuous tracking vs. a single check), not
+  spatial. A production deployment covering a larger area, different
+  land-cover contrasts, or overnight shifts might reveal a genuine
+  spatial signal — worth testing, not something we're claiming here.
 
 ## Intended use
 
@@ -185,3 +274,14 @@ on-site monitoring, and supervisor judgement.
 - [CDC/NIOSH — Heat Safety Tool App](https://www.cdc.gov/niosh/heat-stress/communication-resources/app.html)
 - [CDC MMWR — Evaluation of Occupational Exposure Limits for Heat Stress in Outdoor Workers, United States 2011–2016](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6048976/)
 - [PerryWeather — OSHA Heat Safety Standard for Outdoor Workers: New Rules](https://perryweather.com/resources/osha-heat-safety-rules/)
+- [EPA — What Are Heat Islands?](https://www.epa.gov/heatislands/what-are-heat-islands)
+- [PNAS — Scale-dependent interactions between tree canopy cover and impervious surfaces reduce daytime urban heat during summer](https://www.pnas.org/doi/10.1073/pnas.1817561116)
+- [npj Urban Sustainability — Increasing tree canopy lowers urban air temperature by up to 1.5°C in heat-prone areas](https://www.nature.com/articles/s42949-025-00277-x)
+
+---
+
+*Updated 20 Aug 2026: added the "What we measured" and "Baseline
+comparison methodology" sections after testing the spatial-variance
+hypothesis directly against real cached data and finding it did not
+hold in this study area. The project's differentiator claim was revised
+from spatial to temporal on the basis of that evidence.*
