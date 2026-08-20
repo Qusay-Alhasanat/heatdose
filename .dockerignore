@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.gitignore
+.env
+.pytest_cache
+.python-version.bak
+node_modules
+.DS_Store
+*.md
+# NOTE: do NOT add data/cache/ here — those JSON files are required at
+# runtime; the deployed container must never depend on a live API call.
