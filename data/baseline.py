@@ -52,6 +52,56 @@ def _city_average_for_hour(date: str, hour: int, granularity: int = 100) -> floa
     return round(sum(temps) / len(temps), 2)
 
 
+# --------------------------------------------------------------------
+# PIVOT NOTE (20 Aug): real spatial temperature variance measured across
+# this study area — even between a verified industrial salvage yard and
+# a verified 222-acre park with a lagoon, checked at 06:00, 10:00, 14:00,
+# 18:00, and 03:00 — came back under 0.3C every time. Consistent with
+# published air-temperature (canopy-layer) UHI literature, which is far
+# smaller than surface UHI and weakest under daytime convective mixing.
+# See methodology.md for the full writeup and citations.
+#
+# What IS real and large in our own cached data: a ~7C swing between
+# 06:00 and 14:00 on the same day. flatten_to_city_average() (spatial,
+# per-hour) is kept below for transparency — it's what we tested first —
+# but flatten_to_single_checkin() below is the primary comparison now:
+# it models a manager who checks conditions once (e.g. at shift start)
+# and doesn't track how much hotter it gets later, which is where the
+# real, measured, defensible gap actually lives.
+# --------------------------------------------------------------------
+
+
+def flatten_to_single_checkin(shift: list[dict], granularity: int = 100) -> list[dict]:
+    """
+    Simulates a manager who checks conditions once — at the start of the
+    shift — and dispatches the crew without re-checking as the day heats
+    up. Replaces every point's temp_c with the city-wide average at the
+    shift's FIRST hour, held constant for the entire shift.
+
+    This is the realistic baseline: most operational weather checks are
+    a single morning look, not continuous hour-by-hour monitoring. The
+    gap this reveals is temporal, not spatial — and it's large: Phoenix
+    routinely swings ~7C between a 06:00 start and the early-afternoon
+    peak in our own measured data.
+
+    Args:
+        shift: contract-compliant points, already bridged to real temps.
+        granularity: must match the granularity the hours were cached
+            with.
+
+    Returns:
+        A new list of points, same shape, with temp_c fixed to the
+        shift-start hour's city average throughout. Input not mutated.
+    """
+    if not shift:
+        return []
+
+    date, start_hour = _round_to_cached_hour(shift[0]["timestamp"])
+    checkin_temp = _city_average_for_hour(date, start_hour, granularity)
+
+    return [{**point, "temp_c": checkin_temp} for point in shift]
+
+
 def flatten_to_city_average(shift: list[dict], granularity: int = 100) -> list[dict]:
     """
     Simulates what a standard city-level weather API would have
@@ -86,8 +136,11 @@ def flatten_to_city_average(shift: list[dict], granularity: int = 100) -> list[d
 
 def compare_worker(shift: list[dict], granularity: int = 100) -> dict:
     """
-    Compares one worker's real hyperlocal exposure against what a
-    city-level feed would have shown for the same route and times.
+    Compares one worker's real, hour-by-hour tracked exposure against
+    what a single-check-in baseline would have shown for the same
+    route and times. See the PIVOT NOTE above for why this is a
+    temporal comparison (single check vs continuous tracking) rather
+    than a spatial one.
 
     Args:
         shift: one worker's bridged (real-temperature) shift.
@@ -104,7 +157,7 @@ def compare_worker(shift: list[dict], granularity: int = 100) -> dict:
     if not shift:
         raise ValueError("compare_worker() requires a non-empty shift.")
 
-    flattened = flatten_to_city_average(shift, granularity=granularity)
+    flattened = flatten_to_single_checkin(shift, granularity=granularity)
 
     hyperlocal_excess = calculate_excess_dose(shift)
     city_excess = calculate_excess_dose(flattened)
