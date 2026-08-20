@@ -4,16 +4,37 @@ Generates fake worker shift data matching data_contract.md exactly.
 
 Design note
 -----------
-Temperature here is a function of BOTH time and location. This models the
-urban heat island effect: within a single city at a single hour, asphalt
-industrial zones run several degrees hotter than shaded parks or greenways.
+Temperature here is a function of BOTH time and location, using a
+synthetic urban-heat-island model (ZONE_OFFSETS below). This model
+originally motivated the project's spatial-advantage hypothesis — that
+different zones differ substantially in real temperature at the same
+hour.
 
-That spatial variation is the entire premise of this project. City-level
-weather data collapses it to one number; FortyGuard's 20m resolution
-preserves it. Our mock data must reproduce that structure, otherwise every
-worker accumulates an identical Heat Dose and the system has nothing to say.
+**Status update (20 Aug):** real FortyGuard data tested against this
+hypothesis directly (see docs/methodology.md, "What we measured") found
+real spatial variance under 0.3°C in our study area — far smaller than
+the offsets below imply. The product's core claim shifted from spatial
+to temporal accordingly (see data/baseline.py).
 
-Used to build and test all layers (Data, Agent, Web) before real API access.
+**Why ZONE_OFFSETS is still here and still used:** it still serves two
+legitimate, narrower purposes, both pre-bridge:
+1. Giving mock-only shifts (before real_shift_builder.py bridges them)
+   enough variety to sanity-check code paths during development.
+2. Driving data/cool_points.py's candidate-point temperatures — cool
+   point suggestions remain fully synthetic by design (see
+   PROJECT_SPEC.md §12, "Cool points from OpenStreetMap amenity data" is
+   explicitly out of scope). This means a cool-point recommendation's
+   apparent temperature benefit is illustrative, not measured from real
+   data — worth stating plainly if asked, not something to imply is
+   real-data-backed.
+
+Once a worker's shift is bridged via real_shift_builder.py, this
+synthetic temperature is entirely discarded and replaced with a real
+FortyGuard reading — ZONE_OFFSETS has no influence on any dose, risk
+level, or baseline-comparison number in the actual product.
+
+Used to build and test all layers (Data, Agent, Web) before real API
+access, and to drive data/cool_points.py's candidate temperatures.
 """
 
 import random

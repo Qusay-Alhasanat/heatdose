@@ -76,10 +76,13 @@ file responsible for producing data in this shape from a real source.
 
 | File | Responsible for |
 | --- | --- |
-| `data/mock_data.py` | Generating fake worker shifts in this exact shape |
+| `data/mock_data.py` | Generating fake worker shifts in this exact shape (temp_c is synthetic and discarded after bridging — see `real_shift_builder.py`) |
 | `data/fortyguard_client.py` | Producing this exact shape from the real API (owned by Qusay) |
-| `data/hdi.py` | Consuming a list of these objects, returning a Heat Dose Index score |
-| `agent/tools.py` | Reading HDI output, never talking to the API directly |
+| `data/real_shift_builder.py` | Replacing `mock_data.py`'s synthetic `temp_c` with a real FortyGuard reading, per point, via nearest-tile lookup. Output is contract-compliant and is what every downstream file actually uses |
+| `data/hdi.py` | Consuming a list of these objects, returning Heat Dose Index scores (total and excess) |
+| `data/baseline.py` | Consuming bridged (real-temperature) shifts to compare continuous hyperlocal tracking against a single-check-in baseline |
+| `data/worker_status.py` | Aggregating one worker's bridged shift into a single status dict for the Agent layer |
+| `agent/tools.py` | Reading `worker_status.py`/`baseline.py`/`cool_points.py` output, never talking to the API or `fortyguard_client.py` directly |
 | `web/` | Rendering this shape on the dashboard |
 
 ## Cool Point (rest / shade candidate location)

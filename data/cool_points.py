@@ -4,6 +4,15 @@ Finds the nearest meaningfully cooler location for a worker, given a set
 of candidate rest points. This is the data-layer function behind the
 Agent's "suggest a cooler spot" tool — the Agent calls this, it never
 computes distances or eligibility itself.
+
+⚠️ Data source note (added 20 Aug, see mock_data.py's docstring for full
+context): candidate point temperatures come from mock_data.temp_at() —
+a synthetic zone model, NOT real FortyGuard data. This is a deliberate
+scope decision (PROJECT_SPEC.md §12: hand-placed candidates, not real
+amenity/temperature data), not an oversight. It does mean a cool point's
+apparent temp_diff_c is illustrative rather than measured. If asked
+directly, be upfront about this rather than implying the suggestion is
+backed by the same real data as a worker's dose/risk numbers.
 """
 
 import math
