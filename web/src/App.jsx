@@ -4,10 +4,15 @@ import viteLogo from './assets/vite.svg'
 import heroImg from './assets/hero.png'
 import './App.css'
 import WorkerList from './components/WorkerList'
+import MapView from './components/MapView'
 
 function App() {
   return (
-    <WorkerList />
+    <div>
+      <MapView />
+      <WorkerList />
+    </div>
+
   )
 }
 
