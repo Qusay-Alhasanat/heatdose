@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getWorkers } from "../api/client";
+import { getWorkers } from "../Api/client";
 
 const RISK_VAR = {
     low: "var(--risk-low)",

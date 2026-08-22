@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { getWorkers } from "../api/client";
+import { getWorkers } from "../Api/client";
 
 const RISK_HEX = {
     low: "#34d399",
