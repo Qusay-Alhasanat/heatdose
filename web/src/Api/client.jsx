@@ -5,3 +5,8 @@ export async function getWorkers() {
     const res = await fetch(`${BASE_URL}/api/workers`);
     return res.json();
 }
+
+export async function getComparison() {
+    const res = await fetch(`${BASE_URL}/api/comparison`);
+    return res.json();
+}

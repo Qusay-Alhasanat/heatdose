@@ -5,10 +5,12 @@ import heroImg from './assets/hero.png'
 import './App.css'
 import WorkerList from './components/WorkerList'
 import MapView from './components/MapView'
+import ComparisonView from './components/ComparisonView'
 
 function App() {
   return (
     <div>
+      <ComparisonView />
       <MapView />
       <WorkerList />
     </div>
