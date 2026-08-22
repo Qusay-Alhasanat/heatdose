@@ -1,12 +1,11 @@
-// web/src/components/WorkerList.jsx
 import { useState, useEffect } from "react";
-import { getWorkers } from "../Api/client";
+import { getWorkers } from "../api/client";
 
-const RISK_COLORS = {
-    low: "#4ade80",
-    moderate: "#facc15",
-    high: "#fb923c",
-    extreme: "#ef4444",
+const RISK_VAR = {
+    low: "var(--risk-low)",
+    moderate: "var(--risk-moderate)",
+    high: "var(--risk-high)",
+    extreme: "var(--risk-extreme)",
 };
 
 export default function WorkerList() {
@@ -17,18 +16,27 @@ export default function WorkerList() {
     }, []);
 
     return (
-        <div>
-            <h2>Workers</h2>
+        <div className="panel">
+            <h3 style={{ marginBottom: "14px", fontSize: "15px" }}>
+                Workers ({workers.length})
+            </h3>
             {workers.map((w) => (
-                <div
-                    key={w.worker_id}
-                    style={{
-                        padding: "8px",
-                        marginBottom: "4px",
-                        borderLeft: `6px solid ${RISK_COLORS[w.risk_level]}`,
-                    }}
-                >
-                    {w.worker_id} — {w.risk_level} — excess dose: {w.excess_dose}
+                <div className="worker-row" key={w.worker_id}>
+                    <div
+                        className="risk-chip"
+                        style={{ background: RISK_VAR[w.risk_level] }}
+                    />
+                    <span className="worker-id">{w.worker_id}</span>
+                    <span
+                        className="risk-label"
+                        style={{
+                            color: RISK_VAR[w.risk_level],
+                            background: "rgba(255,255,255,0.05)",
+                        }}
+                    >
+                        {w.risk_level}
+                    </span>
+                    <span className="worker-dose figure">{w.excess_dose}</span>
                 </div>
             ))}
         </div>

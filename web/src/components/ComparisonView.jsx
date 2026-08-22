@@ -1,12 +1,11 @@
-// web/src/components/ComparisonView.jsx
 import { useState, useEffect } from "react";
 import { getComparison } from "../api/client";
 
-const RISK_COLORS = {
-    low: "#4ade80",
-    moderate: "#facc15",
-    high: "#fb923c",
-    extreme: "#ef4444",
+const RISK_VAR = {
+    low: "var(--risk-low)",
+    moderate: "var(--risk-moderate)",
+    high: "var(--risk-high)",
+    extreme: "var(--risk-extreme)",
 };
 
 export default function ComparisonView() {
@@ -16,73 +15,68 @@ export default function ComparisonView() {
         getComparison().then(setSummary);
     }, []);
 
-    if (!summary) return <p>Loading comparison...</p>;
+    if (!summary) return <div className="panel">Loading comparison...</div>;
 
     const percent = Math.round(
         (summary.underestimated_count / summary.total_workers) * 100
     );
 
+    const rows = Object.values(summary.comparisons).sort(
+        (a, b) => b.dose_difference - a.dose_difference
+    );
+
     return (
-        <div style={{ padding: "20px" }}>
-            {/* الرقم العنوان — لحظة الـpitch */}
-            <div
-                style={{
-                    background: "#1e1e2e",
-                    padding: "24px",
-                    borderRadius: "8px",
-                    marginBottom: "20px",
-                    textAlign: "center",
-                }}
-            >
-                <h1 style={{ margin: 0, color: "#ef4444" }}>
-                    {summary.underestimated_count} of {summary.total_workers} workers
-                    ({percent}%)
-                </h1>
-                <p style={{ color: "#aaa", marginTop: "8px" }}>
-                    had their risk underestimated by a single morning weather check —
-                    continuous hyperlocal tracking caught what a one-time check missed
+        <>
+            <div className="panel headline">
+                <div className="headline-number figure">
+                    {summary.underestimated_count} / {summary.total_workers}
+                </div>
+                <p className="headline-caption">
+                    workers ({percent}%) had their risk underestimated by a single
+                    morning weather check — continuous hyperlocal tracking caught
+                    what a one-time check missed.
                 </p>
             </div>
 
-            {/* جدول المقارنة لكل عامل */}
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                    <tr style={{ textAlign: "left", borderBottom: "2px solid #444" }}>
-                        <th style={{ padding: "8px" }}>Worker</th>
-                        <th style={{ padding: "8px" }}>Single Morning Check</th>
-                        <th style={{ padding: "8px" }}>Continuous Tracking</th>
-                        <th style={{ padding: "8px" }}>Difference</th>
-                        <th style={{ padding: "8px" }}>Missed?</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {Object.values(summary.comparisons)
-                        .sort((a, b) => b.dose_difference - a.dose_difference)
-                        .map((c) => (
+            <div className="panel">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>Single Morning Check</th>
+                            <th>Continuous Tracking</th>
+                            <th>Difference</th>
+                            <th>Missed?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {rows.map((c) => (
                             <tr
                                 key={c.worker_id}
-                                style={{
-                                    borderBottom: "1px solid #333",
-                                    background: c.risk_underestimated
-                                        ? "rgba(239,68,68,0.08)"
-                                        : "transparent",
-                                }}
+                                className={c.risk_underestimated ? "underestimated" : ""}
                             >
-                                <td style={{ padding: "8px" }}>{c.worker_id}</td>
-                                <td style={{ padding: "8px", color: RISK_COLORS[c.city_level.risk_level] }}>
-                                    {c.city_level.risk_level} ({c.city_level.excess_dose})
+                                <td className="figure">{c.worker_id}</td>
+                                <td style={{ color: RISK_VAR[c.city_level.risk_level] }}>
+                                    {c.city_level.risk_level}{" "}
+                                    <span className="figure">
+                                        ({c.city_level.excess_dose})
+                                    </span>
                                 </td>
-                                <td style={{ padding: "8px", color: RISK_COLORS[c.hyperlocal.risk_level] }}>
-                                    {c.hyperlocal.risk_level} ({c.hyperlocal.excess_dose})
+                                <td style={{ color: RISK_VAR[c.hyperlocal.risk_level] }}>
+                                    {c.hyperlocal.risk_level}{" "}
+                                    <span className="figure">
+                                        ({c.hyperlocal.excess_dose})
+                                    </span>
                                 </td>
-                                <td style={{ padding: "8px" }}>+{c.dose_difference}</td>
-                                <td style={{ padding: "8px" }}>
-                                    {c.risk_underestimated ? "⚠️ YES" : "no"}
+                                <td className="figure">+{c.dose_difference}</td>
+                                <td className={c.risk_underestimated ? "missed-yes" : "missed-no"}>
+                                    {c.risk_underestimated ? "Yes" : "No"}
                                 </td>
                             </tr>
                         ))}
-                </tbody>
-            </table>
-        </div>
+                    </tbody>
+                </table>
+            </div>
+        </>
     );
 }

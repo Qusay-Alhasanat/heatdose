@@ -1,17 +1,15 @@
-// web/src/components/MapView.jsx
 import { useState, useEffect } from "react";
 import { MapContainer, TileLayer, CircleMarker, Popup } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { getWorkers } from "../Api/client";
+import { getWorkers } from "../api/client";
 
-const RISK_COLORS = {
-    low: "#4ade80",
-    moderate: "#facc15",
+const RISK_HEX = {
+    low: "#34d399",
+    moderate: "#fbbf24",
     high: "#fb923c",
-    extreme: "#ef4444",
+    extreme: "#f87171",
 };
 
-// مركز تقريبي لمنطقة الدراسة بفينكس
 const PHOENIX_CENTER = [33.45, -112.065];
 
 export default function MapView() {
@@ -22,37 +20,42 @@ export default function MapView() {
     }, []);
 
     return (
-        <MapContainer
-            center={PHOENIX_CENTER}
-            zoom={12}
-            style={{ height: "500px", width: "100%" }}
-        >
-            <TileLayer
-                attribution='&copy; OpenStreetMap contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {workers.map((w) => (
-                <CircleMarker
-                    key={w.worker_id}
-                    center={[w.current_location.lat, w.current_location.lng]}
-                    radius={10}
-                    pathOptions={{
-                        color: RISK_COLORS[w.risk_level],
-                        fillColor: RISK_COLORS[w.risk_level],
-                        fillOpacity: 0.8,
-                    }}
+        <div className="panel" style={{ padding: 0, overflow: "hidden" }}>
+            <div className="map-container">
+                <MapContainer
+                    center={PHOENIX_CENTER}
+                    zoom={12}
+                    style={{ height: "480px", width: "100%" }}
                 >
-                    <Popup>
-                        <strong>{w.worker_id}</strong>
-                        <br />
-                        Risk: {w.risk_level}
-                        <br />
-                        Excess dose: {w.excess_dose}
-                        <br />
-                        Zone: {w.current_zone}
-                    </Popup>
-                </CircleMarker>
-            ))}
-        </MapContainer>
+                    <TileLayer
+                        attribution="&copy; OpenStreetMap contributors"
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    {workers.map((w) => (
+                        <CircleMarker
+                            key={w.worker_id}
+                            center={[w.current_location.lat, w.current_location.lng]}
+                            radius={9}
+                            pathOptions={{
+                                color: RISK_HEX[w.risk_level],
+                                fillColor: RISK_HEX[w.risk_level],
+                                fillOpacity: 0.85,
+                                weight: 2,
+                            }}
+                        >
+                            <Popup>
+                                <strong>{w.worker_id}</strong>
+                                <br />
+                                Risk: {w.risk_level}
+                                <br />
+                                Excess dose: {w.excess_dose}
+                                <br />
+                                Zone: {w.current_zone}
+                            </Popup>
+                        </CircleMarker>
+                    ))}
+                </MapContainer>
+            </div>
+        </div>
     );
 }
