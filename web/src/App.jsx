@@ -3,10 +3,12 @@ import MapView from "./components/MapView";
 import WorkerList from "./components/WorkerList";
 import ComparisonView from "./components/ComparisonView";
 import ThermalScale from "./components/ThermalScale";
+import AgentPanel from "./components/AgentPanel";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "comparison", label: "Impact" },
+  { id: "agent", label: "Ask" },
 ];
 
 function App() {
@@ -42,6 +44,7 @@ function App() {
           </div>
         )}
         {tab === "comparison" && <ComparisonView />}
+        {tab === "agent" && <AgentPanel />}
       </div>
     </div>
   );

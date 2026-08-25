@@ -10,3 +10,12 @@ export async function getComparison() {
     const res = await fetch(`${BASE_URL}/api/comparison`);
     return res.json();
 }
+
+export async function askAgent(question) {
+    const res = await fetch(`${BASE_URL}/api/agent/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+    });
+    return res.json();
+}
