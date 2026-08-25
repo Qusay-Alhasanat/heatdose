@@ -58,12 +58,21 @@ _client: OpenAI | None = None
 
 def _get_client() -> OpenAI:
     """Lazy singleton so importing this module never requires an API key
-    (e.g. running agent/tools.py's own tests)."""
+    (e.g. running agent/tools.py's own tests).
+
+    IMPORTANT: api_key and base_url must always be for the SAME
+    provider. MODEL above is in OpenRouter's "provider/model:tag"
+    format specifically - swapping base_url to a different provider
+    without also changing MODEL's format (and the env var it reads)
+    will fail every request. If you want to try a different provider,
+    change api_key, base_url, AND the MODEL env var/default together,
+    in the same edit.
+    """
     global _client
     if _client is None:
         _client = OpenAI(
-            api_key=os.environ.get("GEMINI_API_KEY"),
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+            base_url=OPENROUTER_BASE_URL,
         )
     return _client
 
@@ -215,8 +224,6 @@ def _step_limit_answer(
         response = client.chat.completions.create(
             model=MODEL, messages=messages, tool_choice="none", timeout=10
         )
-        # A free-tier model can return an empty content field; fall back
-        # rather than handing the user a blank answer.
         content = response.choices[0].message.content or _fallback_summary(tool_trace)
     except OpenAIError:
         content = _fallback_summary(tool_trace)
