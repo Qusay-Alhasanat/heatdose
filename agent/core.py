@@ -62,8 +62,8 @@ def _get_client() -> OpenAI:
     global _client
     if _client is None:
         _client = OpenAI(
-            api_key=os.environ.get("OPENROUTER_API_KEY"),
-            base_url=OPENROUTER_BASE_URL,
+            api_key=os.environ.get("GEMINI_API_KEY"),
+            base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
         )
     return _client
 

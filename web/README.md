@@ -1,16 +1,47 @@
-# React + Vite
+# web/ — HeatDose Dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + Vite + Leaflet frontend. Talks only to `api/` over HTTP — never
+imports from `data/` or `agent/` directly.
 
-Currently, two official plugins are available:
+**Live:** <https://heatdose.vercel.app>
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Structure
 
-## React Compiler
+```
+src/
+├── api/
+│   └── client.js       — single source of truth for the API base URL
+├── components/
+│   ├── MapView.jsx      — worker locations on a Leaflet map
+│   ├── WorkerList.jsx    — roster sorted by risk
+│   ├── ComparisonView.jsx — headline stat + single-check vs continuous table
+│   ├── AgentPanel.jsx    — chat UI for the LLM agent, shows tool_trace
+│   └── ThermalScale.jsx  — the shared low→extreme colour legend strip
+└── App.jsx               — tab navigation (Dashboard / Impact / Ask)
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Design system
 
-## Expanding the Oxlint configuration
+Dark navy base (`--bg-base`), thermal risk scale (`--risk-low` through
+`--risk-extreme`) reused consistently across the map, list, and table —
+see `src/index.css` for the full token set. Typography: Space Grotesk
+(headings) + IBM Plex Sans (body) + IBM Plex Mono (all numeric data).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+## Run locally
+
+```
+npm install
+npm run dev
+```
+
+Talks to the live API (`https://heatdose-production.up.railway.app`)
+by default — no local backend needed to develop the UI. Change
+`BASE_URL` in `src/api/client.js` to point at a local `api/` instance
+if needed.
+
+## Important framing note
+
+The comparison in `ComparisonView.jsx` is a **temporal** comparison
+(single morning check vs. continuous tracking), not spatial/location.
+See the root `README.md`'s "What we measured" reference before writing
+any new copy that explains it.
