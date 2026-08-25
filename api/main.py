@@ -28,6 +28,7 @@ from api.models import (
     HealthResponse,
     HeatmapPoint,
     ShiftPoint,
+    ToolTraceEntry,
     WorkerDetail,
     WorkerStatus,
 )
@@ -209,25 +210,19 @@ def get_comparison() -> ComparisonSummary:
 
 
 # --------------------------------------------------------------------
-# Agent — STUB until agent/ is ready
+# Agent
 # --------------------------------------------------------------------
 
 
 @app.post("/api/agent/query", response_model=AgentQueryResponse)
 def agent_query(request: AgentQueryRequest) -> AgentQueryResponse:
-    """
-    TODO(agent owner): replace this stub with a real call into agent/
-    once it exists. Kept as a 200-OK stub (not a 501) deliberately —
-    this lets the web owner build and test the chat panel's request/
-    response wiring right now, without waiting for the agent to exist.
-    Swap the body of this function for a real agent call; the response
-    shape (AgentQueryResponse) should not need to change.
-    """
+    from agent.core import run_agent
+
+    answer, trace = run_agent(request.question)
     return AgentQueryResponse(
-        answer=(
-            "Agent not yet wired up. This is a placeholder response so "
-            "the web layer can be built against the final response shape "
-            f"now. Your question was: {request.question!r}"
-        ),
-        tool_trace=[],
+        answer=answer,
+        tool_trace=[
+            ToolTraceEntry(tool=t["tool"], args=t["args"], result=t["result"])
+            for t in trace
+        ],
     )

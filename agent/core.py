@@ -4,10 +4,15 @@ The agent's tool-calling loop: turns one natural-language question into
 zero or more tool calls and a final grounded answer.
 
 Integration point (Agent_Brief.md section 0): api/main.py's
-agent_query() stub calls run_agent(request.question) and returns the
+agent_query() calls run_agent(request.question) and returns the
 result in AgentQueryResponse's shape. That one-line swap is the only
 change api/ needs — nothing here reaches into api/ or data/ beyond the
 tool wrappers in agent/tools.py.
+
+Provider: OpenRouter. It exposes an OpenAI-compatible API, so the same
+`openai` client library works unchanged — only the base_url, the key,
+and the model-ID format differ (OpenRouter uses "provider/model:tag",
+not OpenAI's bare model names).
 
 Guardrails enforced here, not just requested in the system prompt
 (PROJECT_SPEC.md section 7 / Agent_Brief.md section 3):
@@ -36,7 +41,15 @@ except ModuleNotFoundError:  # pragma: no cover
     from agent.prompts import SYSTEM_PROMPT
     from agent.tools import TOOL_SCHEMAS, call_tool
 
-MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+# A ":free" model is fine for confirming the wiring works end to end —
+# real tool calls, a real trace — but free routes rate-limit hard and
+# their tool-calling reliability varies by model. Swap to a paid model
+# before the demo. Model IDs also rotate on OpenRouter, so this is an
+# env var, not a hardcoded constant.
+MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
+
 MAX_TOOL_CALLS = 5
 TIMEOUT_SECONDS = 30.0
 
@@ -48,7 +61,10 @@ def _get_client() -> OpenAI:
     (e.g. running agent/tools.py's own tests)."""
     global _client
     if _client is None:
-        _client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        _client = OpenAI(
+            api_key=os.environ.get("OPENROUTER_API_KEY"),
+            base_url=OPENROUTER_BASE_URL,
+        )
     return _client
 
 
@@ -127,7 +143,9 @@ def run_agent(question: str) -> tuple[str, list[dict]]:
                         "role": "tool",
                         "tool_call_id": tc.id,
                         "content": json.dumps(
-                            {"error": "Step limit reached (5 tool calls). Not executed."}
+                            {
+                                "error": "Step limit reached (5 tool calls). Not executed."
+                            }
                         ),
                     }
                 )
@@ -135,7 +153,9 @@ def run_agent(question: str) -> tuple[str, list[dict]]:
 
             args = _parse_arguments(tc.function.arguments)
             result = call_tool(tc.function.name, args)
-            tool_trace.append({"tool": tc.function.name, "args": args, "result": result})
+            tool_trace.append(
+                {"tool": tc.function.name, "args": args, "result": result}
+            )
             tool_calls_made += 1
 
             messages.append(
@@ -155,6 +175,21 @@ def _parse_arguments(raw: str) -> dict:
         return json.loads(raw) if raw else {}
     except json.JSONDecodeError:
         return {}
+
+
+def _fallback_summary(tool_trace: list[dict]) -> str:
+    """What to say when the model gives us nothing usable — never return
+    an empty string to the user."""
+    if not tool_trace:
+        return (
+            "I couldn't produce an answer for that question. Try asking "
+            "about a specific worker (W-01 through W-08) or who's at risk."
+        )
+    checked = "; ".join(f"{t['tool']}({t['args']})" for t in tool_trace)
+    return (
+        "I reached the 5-tool-call limit for this question before I could "
+        f"finish answering. Here's what I checked before stopping: {checked}"
+    )
 
 
 def _step_limit_answer(
@@ -180,13 +215,11 @@ def _step_limit_answer(
         response = client.chat.completions.create(
             model=MODEL, messages=messages, tool_choice="none", timeout=10
         )
-        content = response.choices[0].message.content or ""
+        # A free-tier model can return an empty content field; fall back
+        # rather than handing the user a blank answer.
+        content = response.choices[0].message.content or _fallback_summary(tool_trace)
     except OpenAIError:
-        content = (
-            "I reached the 5-tool-call limit for this question before I "
-            "could finish answering. Here's what I checked before stopping: "
-            + "; ".join(f"{t['tool']}({t['args']})" for t in tool_trace)
-        )
+        content = _fallback_summary(tool_trace)
     return content, tool_trace
 
 
