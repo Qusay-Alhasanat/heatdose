@@ -146,6 +146,41 @@ rate card — this is a concrete open item, not something to guess at.
    single clearest piece of evidence that the product does something
    a status-quo weather check cannot.
 
+## 8. Connecting real workers — what actually changes
+
+The architecture is deliberately split for this reason: only the data
+*source* changes between demo and production, nothing downstream.
+
+`real_shift_builder.py` consumes location + timestamp from any source
+that matches our contract shape — it doesn't know or care where they
+came from. In the demo, that's `mock_data.py`. In production, it would
+be one of:
+
+- An existing fleet-tracking API the customer already runs (Samsara,
+  Verizon Connect, Fleetio) — the fastest path, since most mid-size
+  contractors already have GPS on trucks/crews for other reasons
+- A lightweight mobile app pinging location periodically
+- A wearable safety device that already reports GPS (a natural
+  integration point with the hardware vendors named in section 4 —
+  license HeatDose's exposure-scoring engine as their environmental
+  data layer, rather than competing with their hardware)
+- Manual shift/zone entry by a supervisor, as a low-fidelity fallback
+
+Everything downstream — `hdi.py`, `baseline.py`, `worker_status.py`,
+all four agent tools — runs unmodified regardless of which source feeds
+it. This is not a claim; it's the same seam `real_shift_builder.py`
+already crosses today, replacing `mock_data.py`'s synthetic points with
+real FortyGuard temperatures.
+
+**Privacy, stated plainly rather than left for a judge to ask about:**
+tracking a real worker's location requires explicit consent in most
+jurisdictions. A production deployment should default to
+crew/shift-level aggregation for reporting rather than perpetual
+individual location display, and needs a clear data-retention policy
+(how long raw location history is kept, who can access it). This is a
+deployment requirement, not a footnote — worth stating upfront in any
+customer conversation, not discovered during one.
+
 ## Sources
 
 - [OSHA — Heat Injury and Illness Prevention in Outdoor and Indoor Work Settings Rulemaking](https://www.osha.gov/heat-exposure/rulemaking/)
