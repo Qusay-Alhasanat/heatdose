@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { askAgent } from "../Api/client";
+import { askAgent } from "../api/client";
 
 export default function AgentPanel() {
     const [question, setQuestion] = useState("");

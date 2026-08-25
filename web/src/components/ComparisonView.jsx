@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getComparison } from "../Api/client";
+import { getComparison } from "../api/client";
 
 const RISK_VAR = {
     low: "var(--risk-low)",
