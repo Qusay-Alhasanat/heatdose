@@ -25,6 +25,7 @@ from api.models import (
     AgentQueryResponse,
     ComparisonSummary,
     CoolPointCandidate,
+    CoolPointResult,
     HealthResponse,
     HeatmapPoint,
     ShiftPoint,
@@ -33,7 +34,7 @@ from api.models import (
     WorkerStatus,
 )
 from data.baseline import comparison_summary
-from data.cool_points import get_candidates_with_current_temp
+from data.cool_points import find_nearest_cool_point, get_candidates_with_current_temp
 from data.fortyguard_client import (
     DEMO_HOURS,
     STUDY_DATE,
@@ -184,6 +185,56 @@ def get_cool_points(hour: int) -> list[CoolPointCandidate]:
 
     candidates = get_candidates_with_current_temp(hour)
     return [CoolPointCandidate(**c) for c in candidates]
+
+
+@app.get("/api/workers/{worker_id}/cool-point", response_model=CoolPointResult)
+def get_worker_cool_point(worker_id: str) -> CoolPointResult:
+    """
+    Nearest reachable cool point for one worker's CURRENT location and
+    hour — same chaining logic as agent/tools.py's find_cool_point(),
+    kept separate (not imported from agent/) so api/ never depends on
+    agent/ except through the one agreed integration point in
+    agent_query() below.
+
+    reachable=False is a valid, expected outcome (a worker in an
+    exposed zone may genuinely have nowhere better to go) — the
+    frontend must check this field, not assume a route always exists.
+
+    Note: candidate temperatures are synthetic (mock_data.temp_at()),
+    not real FortyGuard data — same caveat as /api/cool-points.
+    """
+    if worker_id not in WORKER_ROSTER:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Unknown worker_id: {worker_id!r}. "
+            f"Known workers: {sorted(WORKER_ROSTER)}",
+        )
+
+    try:
+        status = get_worker_status(worker_id)
+    except UnknownWorkerError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except MissingRealDataError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    hour = status["shift_start_hour"] + status["hours_elapsed"]
+    result = find_nearest_cool_point(
+        worker_location=status["current_location"],
+        worker_current_temp_c=status["current_temp_c"],
+        hour=hour,
+    )
+
+    if result is None:
+        return CoolPointResult(
+            reachable=False,
+            reason=(
+                "No candidate point is both at least 3C cooler and "
+                "within 800m walking distance of this worker's "
+                "current location."
+            ),
+        )
+
+    return CoolPointResult(reachable=True, **result)
 
 
 # --------------------------------------------------------------------

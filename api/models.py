@@ -64,6 +64,24 @@ class CoolPointCandidate(BaseModel):
     temp_c: float
 
 
+class CoolPointResult(BaseModel):
+    """
+    Mirrors find_nearest_cool_point()'s output, wrapped with a
+    "reachable" flag. reachable=False is a valid, expected outcome
+    (see data/cool_points.py) — not an error — so callers must check
+    this field rather than assuming every worker has a route.
+    """
+
+    reachable: bool
+    point_id: str | None = None
+    zone_type: str | None = None
+    location: Location | None = None
+    temp_c: float | None = None
+    temp_diff_c: float | None = None
+    distance_m: int | None = None
+    reason: str | None = None
+
+
 class DoseRisk(BaseModel):
     excess_dose: float
     risk_level: str
