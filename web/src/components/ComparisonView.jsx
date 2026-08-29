@@ -8,8 +8,11 @@ const RISK_VAR = {
     extreme: "var(--risk-extreme)",
 };
 
+const FILTERS = ["all", "extreme", "high", "moderate", "low"];
+
 export default function ComparisonView() {
     const [summary, setSummary] = useState(null);
+    const [filter, setFilter] = useState("all");
 
     useEffect(() => {
         getComparison().then(setSummary);
@@ -21,9 +24,9 @@ export default function ComparisonView() {
         (summary.underestimated_count / summary.total_workers) * 100
     );
 
-    const rows = Object.values(summary.comparisons).sort(
-        (a, b) => b.dose_difference - a.dose_difference
-    );
+    const rows = Object.values(summary.comparisons)
+        .filter((c) => filter === "all" || c.hyperlocal.risk_level === filter)
+        .sort((a, b) => b.dose_difference - a.dose_difference);
 
     return (
         <>
@@ -39,6 +42,19 @@ export default function ComparisonView() {
             </div>
 
             <div className="panel">
+                <div style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                    {FILTERS.map((f) => (
+                        <button
+                            key={f}
+                            onClick={() => setFilter(f)}
+                            className={`tab ${filter === f ? "active" : ""}`}
+                            style={{ textTransform: "capitalize" }}
+                        >
+                            {f}
+                        </button>
+                    ))}
+                </div>
+
                 <table>
                     <thead>
                         <tr>
@@ -58,9 +74,7 @@ export default function ComparisonView() {
                                 <td className="figure">{c.worker_id}</td>
                                 <td style={{ color: RISK_VAR[c.city_level.risk_level] }}>
                                     {c.city_level.risk_level}{" "}
-                                    <span className="figure">
-                                        ({c.city_level.excess_dose})
-                                    </span>
+                                    <span className="figure">({c.city_level.excess_dose})</span>
                                 </td>
                                 <td style={{ color: RISK_VAR[c.hyperlocal.risk_level] }}>
                                     {c.hyperlocal.risk_level}{" "}
@@ -69,13 +83,23 @@ export default function ComparisonView() {
                                     </span>
                                 </td>
                                 <td className="figure">+{c.dose_difference}</td>
-                                <td className={c.risk_underestimated ? "missed-yes" : "missed-no"}>
+                                <td
+                                    className={
+                                        c.risk_underestimated ? "missed-yes" : "missed-no"
+                                    }
+                                >
                                     {c.risk_underestimated ? "Yes" : "No"}
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+
+                {rows.length === 0 && (
+                    <p style={{ color: "var(--text-muted)", fontSize: "13px" }}>
+                        No workers in this risk band.
+                    </p>
+                )}
             </div>
         </>
     );

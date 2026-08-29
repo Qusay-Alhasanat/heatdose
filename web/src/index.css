@@ -13,6 +13,10 @@
   /* Text */
   --text-primary: #edf2f7;
   --text-muted: #7c8b99;
+  --accent-contrast: #07131b;
+  --agent-surface: #16232d;
+  --agent-head: #0e2734;
+  --agent-detail: #d9f5ff;
 
   /* System accent — used ONLY for chrome (live indicator, links),
      never for risk levels, so the risk scale stays semantically pure */
@@ -29,6 +33,20 @@
   --radius: 10px;
 }
 
+:root[data-theme="light"] {
+  --bg-base: #eef3f5;
+  --bg-panel: #ffffff;
+  --bg-panel-raised: #e5edf0;
+  --border: #cbd8dd;
+  --text-primary: #14232b;
+  --text-muted: #5d7079;
+  --accent-system: #087ea4;
+  --accent-contrast: #ffffff;
+  --agent-surface: #f8fcfd;
+  --agent-head: #b8dce3;
+  --agent-detail: #15576d;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -39,6 +57,7 @@ body {
   color: var(--text-primary);
   font-family: 'IBM Plex Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 h1,
@@ -64,6 +83,12 @@ h3 {
   padding: 16px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-panel);
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .brand {
@@ -130,6 +155,43 @@ h3 {
   color: var(--text-primary);
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--accent-system);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--accent-system);
+  outline-offset: 3px;
+}
+
+.theme-toggle-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  color: var(--accent-system);
+  font-size: 19px;
+  line-height: 1;
+}
+
 /* ---------- Thermal scale legend — the signature element ---------- */
 
 .thermal-scale {
@@ -189,6 +251,190 @@ h3 {
   margin-top: 16px;
 }
 
+/* ---------- Floating operations assistant ---------- */
+
+.agent-launcher {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 9px;
+}
+
+.agent-speech {
+  position: relative;
+  padding: 8px 12px;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: 8px;
+  background: var(--agent-surface);
+  color: var(--accent-system);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: agent-speech-in 0.35s ease-out both;
+}
+
+.agent-speech::after {
+  content: "";
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-right: 1px solid rgba(56, 189, 248, 0.45);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.45);
+  background: var(--agent-surface);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.agent-trigger {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: transparent;
+  background-color: transparent;
+  color: var(--bg-base);
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform 0.2s ease;
+}
+
+.agent-trigger:hover {
+  transform: translateY(-3px);
+  background: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.agent-trigger:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 4px;
+}
+
+.bot-antenna {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  width: 2px;
+  height: 8px;
+  background: var(--agent-detail);
+  transform: translateX(-50%);
+}
+
+.bot-antenna::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--risk-low);
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.8);
+}
+
+.bot-head {
+  position: absolute;
+  top: 17px;
+  left: 12px;
+  width: 44px;
+  height: 37px;
+  border: 2px solid var(--agent-detail);
+  border-radius: 12px 12px 10px 10px;
+  background: var(--agent-head);
+}
+
+.bot-ear {
+  position: absolute;
+  top: 10px;
+  width: 5px;
+  height: 13px;
+  border-radius: 3px;
+  background: var(--agent-detail);
+}
+
+.bot-ear-left {
+  left: -7px;
+}
+
+.bot-ear-right {
+  right: -7px;
+}
+
+.bot-eye {
+  position: absolute;
+  top: 10px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-system);
+  box-shadow: 0 0 7px rgba(56, 189, 248, 0.9);
+}
+
+.bot-eye-left {
+  left: 10px;
+}
+
+.bot-eye-right {
+  right: 10px;
+}
+
+.bot-mouth {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  color: var(--agent-detail);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 15px;
+  line-height: 1;
+  transform: translateX(-50%);
+}
+
+.agent-panel-dock {
+  position: fixed;
+  right: 24px;
+  bottom: 108px;
+  width: 360px;
+  max-width: calc(100vw - 48px);
+  max-height: 60vh;
+  overflow-y: auto;
+  z-index: 999;
+}
+
+@keyframes agent-speech-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 520px) {
+  .agent-launcher {
+    right: 16px;
+    bottom: 16px;
+  }
+
+  .agent-panel-dock {
+    right: 16px;
+    bottom: 100px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
 .dashboard-grid {
   display: grid;
   grid-template-columns: 1.4fr 1fr;
@@ -198,6 +444,37 @@ h3 {
 @media (max-width: 800px) {
   .dashboard-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .topbar-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 380px) {
+  .topbar {
+    padding: 14px 16px;
+  }
+
+  .tabs {
+    flex: 1;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 8px 10px;
+  }
+
+  .theme-toggle {
+    padding: 7px 9px;
   }
 }
 

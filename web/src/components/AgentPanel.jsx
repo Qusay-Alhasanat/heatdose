@@ -108,7 +108,7 @@ export default function AgentPanel() {
                         background: "var(--accent-system)",
                         border: "none",
                         borderRadius: "8px",
-                        color: "#0b0f14",
+                        color: "var(--accent-contrast)",
                         fontWeight: 500,
                         cursor: "pointer",
                     }}
