@@ -7,7 +7,7 @@ OpenAI (`gpt-4o-mini` for dev, per `Agent_Brief.md` section 0.5).
 ## Files
 
 | File | Purpose |
-|---|---|
+| --- | --- |
 | `tools.py` | The four tools (`get_worker_status`, `list_workers_at_risk`, `find_cool_point`, `compare_to_city_baseline`), their OpenAI function-calling schemas, and `call_tool()` dispatch. Wraps `data/` only — never talks to `fortyguard_client.py` or the FortyGuard API. |
 | `prompts.py` | The system prompt: role, guardrails, and the cool-point-unreachable behavior (see below). |
 | `core.py` | `run_agent(question) -> (answer, tool_trace)` — the tool-calling loop, with the step limit, timeout, and tracing enforced in code. |
@@ -19,9 +19,15 @@ OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini   # optional, this is the default
 ```
 
-Add these to `.env` (already gitignored). `openai` was added to
-`pyproject.toml`'s dependencies — run `uv sync` (or `pip install -e .`)
-to pick it up.
+Add these to `.env` (already gitignored) for local runs, and to the
+Railway project's environment variables for the deployed API — `core.py`
+reads them from `os.environ`, and `.env` is only loaded locally via
+`load_dotenv()`. `openai` was added to `pyproject.toml`'s dependencies —
+run `uv sync` (or `pip install -e .`) to pick it up.
+
+Note: an earlier commit briefly switched this file to OpenRouter; that
+was reverted (29 Aug) so the code, this README, and `PROJECT_SPEC.md`'s
+confirmed decision all agree on OpenAI, direct.
 
 ## Try it
 

@@ -9,10 +9,9 @@ result in AgentQueryResponse's shape. That one-line swap is the only
 change api/ needs — nothing here reaches into api/ or data/ beyond the
 tool wrappers in agent/tools.py.
 
-Provider: OpenRouter. It exposes an OpenAI-compatible API, so the same
-`openai` client library works unchanged — only the base_url, the key,
-and the model-ID format differ (OpenRouter uses "provider/model:tag",
-not OpenAI's bare model names).
+Provider: OpenAI, direct (per PROJECT_SPEC.md's confirmed decision and
+Agent_Brief.md section 0.5). Uses the `openai` client library's default
+base_url — no OpenRouter, no provider/model:tag format.
 
 Guardrails enforced here, not just requested in the system prompt
 (PROJECT_SPEC.md section 7 / Agent_Brief.md section 3):
@@ -41,14 +40,10 @@ except ModuleNotFoundError:  # pragma: no cover
     from agent.prompts import SYSTEM_PROMPT
     from agent.tools import TOOL_SCHEMAS, call_tool
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-
-# A ":free" model is fine for confirming the wiring works end to end —
-# real tool calls, a real trace — but free routes rate-limit hard and
-# their tool-calling reliability varies by model. Swap to a paid model
-# before the demo. Model IDs also rotate on OpenRouter, so this is an
-# env var, not a hardcoded constant.
-MODEL = os.environ.get("OPENROUTER_MODEL", "nvidia/nemotron-3.5-lightning:free")
+# gpt-4o-mini per Agent_Brief.md section 0.5: cheap, reliable tool
+# calling, right choice for dev and for a hackathon demo alike. Kept as
+# an env var so a swap to a stronger model needs no code change.
+MODEL = os.environ.get("OPENAI_MODEL", "gpt-4o-mini")
 
 MAX_TOOL_CALLS = 5
 TIMEOUT_SECONDS = 30.0
@@ -60,20 +55,13 @@ def _get_client() -> OpenAI:
     """Lazy singleton so importing this module never requires an API key
     (e.g. running agent/tools.py's own tests).
 
-    IMPORTANT: api_key and base_url must always be for the SAME
-    provider. MODEL above is in OpenRouter's "provider/model:tag"
-    format specifically - swapping base_url to a different provider
-    without also changing MODEL's format (and the env var it reads)
-    will fail every request. If you want to try a different provider,
-    change api_key, base_url, AND the MODEL env var/default together,
-    in the same edit.
+    Reads OPENAI_API_KEY and uses the openai library's default base_url
+    (api.openai.com) — no base_url override needed for the direct
+    OpenAI provider.
     """
     global _client
     if _client is None:
-        _client = OpenAI(
-            api_key=os.environ.get("OPENROUTER_API_KEY"),
-            base_url=OPENROUTER_BASE_URL,
-        )
+        _client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     return _client
 
 
