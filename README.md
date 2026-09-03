@@ -222,4 +222,7 @@ used throughout, disclosed per submission requirements.
 
 ## License
 
-MIT
+All rights reserved. This repository is shared publicly for FortyGuard
+Hackathon'26 judging purposes. No license is granted for reuse,
+reproduction, or commercial use without explicit permission from the
+team.
